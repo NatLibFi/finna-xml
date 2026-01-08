@@ -41,6 +41,8 @@ Clark notation: `{namespace-uri}localName`
 
 This notation is used internally and required when there are namespaces in multi-level path queries.
 
+Note that if you have a variable for a namespace URI (which you usually should), you'll need to take PHP's use of curly brackets into account in string interpolation. So if you use double quotes, also double the brackets: `$xmlDoc->all($node, "{{$namespaceUri}}element")`.
+
 Space notation: `namespace-url localName`
 
 This notation can be used for a single-level path query.
