@@ -160,9 +160,8 @@ class XmlParser extends \XMLReader
                     $result['val'] .= $this->value;
                     break;
                 case self::END_ELEMENT:
-                    return $result;
                 case self::NONE:
-                    throw new \Exception('Unexpected XML parsing state');
+                    return $result;
                 default:
                     break;
             }
