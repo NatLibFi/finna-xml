@@ -1,0 +1,41 @@
+{
+    "name": "natlibfi/finna-xml",
+    "type": "library",
+    "description": "Yet another XML parser, reader and writer for diverse records with and without namespaces.",
+    "keywords": ["xml", "dom", "parser"],
+    "license": "MIT",
+    "version": "1.0.0",
+    "autoload": {
+        "psr-4": {
+            "FinnaXml\\": "src/FinnaXml"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ere Maijala",
+            "email": "ere.maijala@helsinki.fi"
+        }
+    ],
+    "config": {
+        "platform": {
+            "php": "8.2"
+        }
+    },
+    "require": {
+        "php": ">=8.2"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "3.89.2",
+        "phing/phing": "3.1.1",
+        "phpstan/phpstan": "2.1.32",
+        "phpunit/php-code-coverage": "^11",
+        "phpunit/phpunit": "11.5.43",
+        "rector/rector": "2.2.7",
+        "squizlabs/php_codesniffer": "4.0.1"
+    },
+    "scripts": {
+        "fix": "phing fix-php",
+        "qa": "phing qa-console"
+    }
+}
+
