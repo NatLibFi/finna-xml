@@ -37,13 +37,13 @@ If you need proper XPath support, use something else. :)
 
 The following notations are supported for searching element and attribute names:
 
-Space notation: `namespace-url localName`
-
-This notation is used internally because it is faster to parse, but it cannot be used without ambiquity in multi-level path queries that contain namespace URIs (that in turn also contain slashes used as path element separator).
-
 Clark notation: `{namespace-uri}localName`
 
-This notation is required when there are namespaces in path queries.
+This notation is used internally and required when there are namespaces in multi-level path queries.
+
+Space notation: `namespace-url localName`
+
+This notation can be used for a single-level path query.
 
 Examples
 --------
