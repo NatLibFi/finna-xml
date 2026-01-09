@@ -42,7 +42,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
  * @license  https://opensource.org/license/mit The MIT License
  * @link     https://github.com/NatLibFi/RecordManager
  */
-class XmlTest extends \PHPUnit\Framework\TestCase
+class XmlDocTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * Test XML creation with existing namespaces.
@@ -263,6 +263,36 @@ class XmlTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($xml->attr($objectIdentificationWrap, 'foo'));
 
         $this->assertSame([], $xml->allValues(path: 'foo'));
+    }
+
+    /**
+     * Test mixed content.
+     *
+     * @return void
+     */
+    public function testMixedContent(): void
+    {
+        $xmlStr = $this->getFixture('mixed-content.xml');
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $xml->setDefaultNamespace('http://www.lido-schema.org', 'lido');
+        $this->assertSame(
+            'record-id',
+            $xml->firstValue(path: 'lido/lidoRecID')
+        );
+        $this->assertSame(
+            'root data',
+            $xml->value($xml->root())
+        );
+        $this->assertSame(
+            'lido',
+            $xml->firstValue(path: '')
+        );
+
+        $this->assertSame(
+            $this->getFixture('mixed-content-min.xml'),
+            $xml->toXML(trim: true)
+        );
     }
 
     /**
