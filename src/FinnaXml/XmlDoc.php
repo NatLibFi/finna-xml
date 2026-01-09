@@ -85,17 +85,18 @@ class XmlDoc
      * Serialize the document as XML.
      *
      * @param int $indent Indent (pretty-print) by $indent spaces
+     * @param bool $trim   Trim leading and trailing whitespace from text nodes?
      *
      * @return string
      */
-    public function toXML(int $indent = 0): string
+    public function toXML(int $indent = 0, bool $trim = false): string
     {
         if (null === $this->parsed) {
             throw new RuntimeException('No parsed document available');
         }
 
         return (new XmlRenderer($this->parsed, $this->defaultNamespace, $this->defaultNamespacePrefix))
-            ->render($indent);
+            ->render($indent, $trim);
     }
 
     /**

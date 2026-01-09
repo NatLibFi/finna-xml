@@ -64,18 +64,19 @@ class XmlRenderer
     /**
      * Render the parsed array as an XML string.
      *
-     * @param int $indent Indent (pretty-print) by $indent spaces
+     * @param int  $indent Indent (pretty-print) by $indent spaces (0 to disable)
+     * @param bool $trim   Trim leading and trailing whitespace from text nodes?
      *
      * @return string
      */
-    public function render(int $indent = 0): string
+    public function render(int $indent = 0, bool $trim = false): string
     {
         $writer = new XMLWriter();
         $writer->openMemory();
         $writer->setIndent((bool)$indent);
         $writer->setIndentString(str_repeat(' ', $indent));
         $writer->startDocument();
-        $this->nodeToXML($writer);
+        $this->nodeToXML($writer, trim: $trim);
         $writer->endDocument();
         return $writer->flush();
     }
@@ -85,10 +86,11 @@ class XmlRenderer
      *
      * @param XMLWriter $writer XMLWriter
      * @param ?array    $node   Node to write, or null to start from root
+     * @param bool      $trim   Trim whitespace from text nodes?
      *
      * @return void
      */
-    protected function nodeToXML(XMLWriter $writer, ?array $node = null): void
+    protected function nodeToXML(XMLWriter $writer, ?array $node = null, bool $trim = false): void
     {
         $current = $node ?? $this->parsed['data'];
         [$elementNs, $localName] = Notation::parse($current['name']);
@@ -152,12 +154,13 @@ class XmlRenderer
             $writer->text($value);
             $writer->endAttribute();
         }
-        if ('' !== $current['val']) {
-            $writer->text($current['val']);
+        $val = $trim ? trim($current['val']) : $current['val'];
+        if ('' !== $val) {
+            $writer->text($val);
         }
         // Sub-nodes:
         foreach ($current['sub'] as $subNode) {
-            $this->nodeToXML($writer, $subNode);
+            $this->nodeToXML($writer, $subNode, $trim);
         }
         $writer->endElement();
     }
