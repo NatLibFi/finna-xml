@@ -233,7 +233,6 @@ class XmlDoc
     public function attr(?array $node, string $attr, bool $trim = true): ?string
     {
         // Try to find the attribute first with namespace and fall back to search without namespace:
-
         $result = $node['attrs'][Notation::ensureValid($attr, $this->defaultNamespace)]
             ?? $node['attrs'][$attr]
             ?? null;
@@ -264,9 +263,12 @@ class XmlDoc
      */
     protected function allByPath(?array $root, string|array $path): array
     {
-        $currentNodes = $root['sub'] ?? $this->parsed['data']['sub'] ?? null;
+        $currentNodes = $root['sub'] ?? $this->root()['sub'] ?? null;
         if (null === $currentNodes) {
             throw new RuntimeException('No parsed document available');
+        }
+        if (!$path) {
+            return $currentNodes;
         }
         $remainingPath = is_array($path) ? $path : $this->explodePath($path);
         $pathPart = array_shift($remainingPath);
