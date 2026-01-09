@@ -117,11 +117,23 @@ class XmlRenderer
             }
             unset($addNamespaces['xml']);
             unset($addNamespaces['xsi']);
+            // Exclude root element's namespace and any other attribute namespaces as they're automatically added by
+            // XMLWriter:
             if ($elementNsPrefix) {
                 unset($addNamespaces[$elementNsPrefix]);
             }
+            foreach ($current['attrs'] as $attr => $value) {
+                if ($parsed = Notation::tryParse($attr)) {
+                    [$ns] = $parsed;
+                    $ns ??= $this->defaultNamespace;
+                    if (false !== ($nsKey = array_search($ns, $addNamespaces))) {
+                        unset($addNamespaces[$nsKey]);
+                    }
+                }
+            }
+
             foreach ($addNamespaces as $prefix => $ns) {
-                $writer->startAttributeNs('xmlns', $prefix, '');
+                $writer->startAttribute("xmlns:$prefix");
                 $writer->text($ns);
                 $writer->endAttribute();
             }
