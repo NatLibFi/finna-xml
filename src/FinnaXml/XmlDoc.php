@@ -84,7 +84,7 @@ class XmlDoc
     /**
      * Serialize the document as XML.
      *
-     * @param int $indent Indent (pretty-print) by $indent spaces
+     * @param int  $indent Indent (pretty-print) by $indent spaces
      * @param bool $trim   Trim leading and trailing whitespace from text nodes?
      *
      * @return string
