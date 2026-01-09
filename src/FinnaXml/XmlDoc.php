@@ -142,6 +142,16 @@ class XmlDoc
     }
 
     /**
+     * Get root node.
+     *
+     * @return ?array Root node, or null if uninitialized
+     */
+    public function root(): ?array
+    {
+        return $this->parsed['data'] ?? null;
+    }
+
+    /**
      * Get all nodes by path starting from the given single node.
      *
      * @param ?array       $node Node to start from (optional)
