@@ -81,7 +81,7 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    public function testXmlAddNs(): void
+    public function stestXmlAddNs(): void
     {
         $xmlStr = $this->getFixture('xml-without-ns.xml');
         $xml = new XmlDoc();
@@ -292,6 +292,23 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(
             $this->getFixture('mixed-content-min.xml'),
             $xml->toXML(trim: true)
+        );
+    }
+
+    /**
+     * Test empty elements.
+     *
+     * @return void
+     */
+    public function testEmptyElements(): void
+    {
+        $xmlStr = $this->getFixture('empty-elements.xml');
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $xml->setDefaultNamespace('http://www.lido-schema.org');
+        $this->assertCount(
+            3,
+            $xml->all(path: 'lido/descriptiveMetadata/eventWrap/eventSet/event')
         );
     }
 

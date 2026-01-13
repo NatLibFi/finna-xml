@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<lidoWrap>
+  <lido>
+    <lidoRecID type="item">12345</lidoRecID>
+    <descriptiveMetadata lang="fi">
+      <eventWrap><eventSet><event><eventType><term>valmistus</term><term lang="en">Creation</term></eventType><eventActor><actorInRole><actor><nameActorSet><appellationValue>Author</appellationValue></nameActorSet></actor><roleActor><term lang="fi">photographer</term><term lang="en">Photographer</term><term lang="sv">fotograf</term></roleActor></actorInRole></eventActor><eventActor><actorInRole><actor><nameActorSet><appellationValue>Company</appellationValue></nameActorSet></actor><roleActor><term lang="fi">volunteer</term><term lang="en">Volunteer</term><term lang="sv">Vapaaehtoistoimija</term></roleActor></actorInRole></eventActor><eventDate><displayDate lang="fi">kuvausaika 02.10.2022</displayDate><displayDate lang="en"/><displayDate lang="sv"/><date><earliestDate/><latestDate/></date></eventDate><eventPlace/><eventMaterialsTech><materialsTech><termMaterialsTech><conceptID type="URI">http://www.yso.fi/onto/koko/p76562</conceptID><term lang="fi">materiaali: alkujaan digitaalinen, jpg</term><term lang="en">material: born digital, jpg</term><term lang="sv">material: ursprungligen digital, jpg</term></termMaterialsTech></materialsTech></eventMaterialsTech><eventDescriptionSet/></event></eventSet><eventSet><event><eventType><term>K&#xE4;ytt&#xF6;</term><term lang="en">use</term></eventType><eventPlace/></event></eventSet><eventSet><event><eventType><term lang="fi">l&#xF6;ytyminen</term><term lang="en">Finding</term></eventType><eventPlace/></event></eventSet></eventWrap>
+    </descriptiveMetadata>
+  </lido>
+</lidoWrap>

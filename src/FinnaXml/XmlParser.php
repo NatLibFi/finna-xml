@@ -145,7 +145,6 @@ class XmlParser extends \XMLReader
         ];
 
         if (self::ELEMENT === $this->nodeType && $this->isEmptyElement) {
-            $this->next();
             return $result;
         }
 
