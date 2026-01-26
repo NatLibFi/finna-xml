@@ -240,6 +240,28 @@ class XmlDoc
     }
 
     /**
+     * Get the name of a node
+     *
+     * @param array $node          Node
+     * @param bool  $omitDefaultNs Leave out namespace if it's the default
+     *
+     * @return string
+     */
+    public function name(array $node, bool $omitDefaultNs = false): string
+    {
+        if (
+            $omitDefaultNs
+            && $this->defaultNamespace
+        ) {
+            $parsed = Notation::parse($node['name']);
+            if ($parsed[0] === $this->defaultNamespace) {
+                return $parsed[1];
+            }
+        }
+        return $node['name'];
+    }
+
+    /**
      * Get the string value of a node
      *
      * @param array $node Node

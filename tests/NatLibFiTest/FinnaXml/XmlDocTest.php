@@ -313,6 +313,46 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Data provider for testName.
+     *
+     * @return \Iterator
+     */
+    public static function nameProvider(): \Iterator
+    {
+        yield [false, false];
+        yield [false, true];
+        yield [true, false];
+        yield [true, true];
+    }
+
+    /**
+     * Test node name.
+     *
+     * @param bool $useDefaultNs Use default namespace?
+     * @param bool $omitDefault  Omit default namespace from the name?
+     *
+     * @return void
+     */
+    #[DataProvider('nameProvider')]
+    public function testName(bool $useDefaultNs, bool $omitDefault): void
+    {
+        $xmlStr = $this->getFixture('xml-with-ns.xml');
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $ns = 'http://www.lido-schema.org';
+        if ($useDefaultNs) {
+            $xml->setDefaultNamespace($ns);
+        }
+        $nodes = $xml->all($xml->first(path: $useDefaultNs ? 'lido' : "{{$ns}}lido"));
+        $expectedPrefix = $useDefaultNs && $omitDefault
+            ? ''
+            : "{{$ns}}";
+        $this->assertCount(2, $nodes);
+        $this->assertSame("{$expectedPrefix}lidoRecID", $xml->name($nodes[0], $omitDefault));
+        $this->assertSame("{$expectedPrefix}descriptiveMetadata", $xml->name($nodes[1], $omitDefault));
+    }
+
+    /**
      * Test invalid input XML.
      *
      * @return void
