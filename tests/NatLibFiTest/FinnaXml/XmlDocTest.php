@@ -450,6 +450,32 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Test filter.
+     *
+     * @return void
+     */
+    public function testFilter(): void
+    {
+        $xml = new XmlDoc();
+        $xml->parse($this->getFixture('xml-with-ns.xml'));
+        $ns = 'http://www.lido-schema.org';
+        $filterPath = "{{$ns}}lido/{{$ns}}descriptiveMetadata/{{$ns}}objectIdentificationWrap/{{$ns}}titleWrap"
+            . "/{{$ns}}titleSet";
+        $xml->filter(fn ($node, $path) => $path === $filterPath);
+        $this->assertXmlStringEqualsXmlString(
+            $this->getFixture('xml-with-ns-filtered.xml'),
+            $xml->toXML()
+        );
+
+        $xml->parse($this->getFixture('xml-with-ns.xml'));
+        $xml->filter(fn ($node, $path) => $xml->name($node) === "{{$ns}}titleSet");
+        $this->assertXmlStringEqualsXmlString(
+            $this->getFixture('xml-with-ns-filtered.xml'),
+            $xml->toXML()
+        );
+    }
+
+    /**
      * Test notation parsing.
      *
      * @return void

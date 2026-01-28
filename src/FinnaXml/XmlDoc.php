@@ -275,6 +275,44 @@ class XmlDoc
     }
 
     /**
+     * Filter nodes.
+     *
+     * Calls the callback for each node and removes the node if the callback returns true.
+     *
+     * @param callable $callback Callback
+     *
+     * @return void
+     */
+    public function filter(callable $callback): void
+    {
+        $this->parsed['data']['sub'] = $this->filterRecursive($callback, $this->parsed['data'], []);
+    }
+
+    /**
+     * Filter nodes recursively.
+     *
+     * Calls the callback for each node and removes the node if the callback returns true.
+     *
+     * @param callable $callback Callback
+     * @param array    $node     Parent node
+     * @param array    $path     Current path
+     *
+     * @return array
+     */
+    protected function filterRecursive(callable $callback, array $node, array $path): array
+    {
+        $result = [];
+        foreach ($node['sub'] as $subNode) {
+            $subPath = [...$path, $subNode['name']];
+            if (!$callback($subNode, implode('/', $subPath))) {
+                $subNode['sub'] = $this->filterRecursive($callback, $subNode, $subPath);
+                $result[] = $subNode;
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Recursively traverse all branches by path and return any values found.
      *
      * @param ?array       $root Node to start from
