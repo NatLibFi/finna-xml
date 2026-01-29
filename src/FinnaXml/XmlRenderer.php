@@ -64,19 +64,20 @@ class XmlRenderer
     /**
      * Render the parsed array as an XML string.
      *
-     * @param int  $indent Indent (pretty-print) by $indent spaces (0 to disable)
-     * @param bool $trim   Trim leading and trailing whitespace from text nodes?
+     * @param int    $indent Indent (pretty-print) by $indent spaces (0 to disable)
+     * @param bool   $trim   Trim leading and trailing whitespace from text nodes?
+     * @param ?array $node   Node to serialize (omit to serialize the full record)
      *
      * @return string
      */
-    public function render(int $indent = 0, bool $trim = false): string
+    public function render(int $indent = 0, bool $trim = false, ?array $node = null): string
     {
         $writer = new XMLWriter();
         $writer->openMemory();
         $writer->setIndent((bool)$indent);
         $writer->setIndentString(str_repeat(' ', $indent));
         $writer->startDocument();
-        $this->nodeToXML($writer, trim: $trim);
+        $this->nodeToXML($writer, $node, trim: $trim, root: true);
         $writer->endDocument();
         return $writer->flush();
     }
@@ -87,10 +88,11 @@ class XmlRenderer
      * @param XMLWriter $writer XMLWriter
      * @param ?array    $node   Node to write, or null to start from root
      * @param bool      $trim   Trim whitespace from text nodes?
+     * @param bool      $root   Is this the root node?
      *
      * @return void
      */
-    protected function nodeToXML(XMLWriter $writer, ?array $node = null, bool $trim = false): void
+    protected function nodeToXML(XMLWriter $writer, ?array $node = null, bool $trim = false, bool $root = false): void
     {
         $current = $node ?? $this->parsed['data'];
         [$elementNs, $localName] = Notation::parse($current['name']);
@@ -101,7 +103,7 @@ class XmlRenderer
                 throw new RuntimeException("No prefix found for namespace $elementNs");
             }
             // Output namespace declaration only for root element (and not for xml namespace):
-            if (null === $node && 'xml' !== $elementNsPrefix) {
+            if ($root && 'xml' !== $elementNsPrefix) {
                 $writer->startElementNs($elementNsPrefix, $localName, $elementNs);
             } else {
                 $writer->startElement("$elementNsPrefix:$localName");
@@ -110,7 +112,7 @@ class XmlRenderer
             $writer->startElement($localName);
         }
         // Write namespaces for root node:
-        if (null === $node && $this->parsed['namespaces']) {
+        if ($root && $this->parsed['namespaces']) {
             $addNamespaces = $this->parsed['namespaces'];
             if ($this->defaultNamespace && $this->defaultNamespacePrefix) {
                 $addNamespaces[$this->defaultNamespacePrefix] = $this->defaultNamespace;

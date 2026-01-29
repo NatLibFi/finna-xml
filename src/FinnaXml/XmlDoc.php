@@ -84,19 +84,20 @@ class XmlDoc
     /**
      * Serialize the document as XML.
      *
-     * @param int  $indent Indent (pretty-print) by $indent spaces
-     * @param bool $trim   Trim leading and trailing whitespace from text nodes?
+     * @param int    $indent Indent (pretty-print) by $indent spaces
+     * @param bool   $trim   Trim leading and trailing whitespace from text nodes?
+     * @param ?array $node   Node to serialize (omit to serialize the full record)
      *
      * @return string
      */
-    public function toXML(int $indent = 0, bool $trim = false): string
+    public function toXML(int $indent = 0, bool $trim = false, ?array $node = null): string
     {
         if (null === $this->parsed) {
             throw new RuntimeException('No parsed document available');
         }
 
         return (new XmlRenderer($this->parsed, $this->defaultNamespace, $this->defaultNamespacePrefix))
-            ->render($indent, $trim);
+            ->render($indent, $trim, $node);
     }
 
     /**
@@ -115,16 +116,23 @@ class XmlDoc
     }
 
     /**
-     * Export a previously parsed document array.
+     * Export a previously parsed document array or node.
+     *
+     * @param ?array $node Node to export (omit to export the full record)
      *
      * @return array
      */
-    public function export(): array
+    public function export(?array $node = null): array
     {
         if (null === $this->parsed) {
             throw new RuntimeException('No parsed document available');
         }
-        return $this->parsed;
+        if (null === $node) {
+            return $this->parsed;
+        }
+        $result = $this->parsed;
+        $result['data'] = $node;
+        return $result;
     }
 
     /**
