@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-29
+
+### Added
+
+- New method `modify()` can now be used to modify nodes of the document (similar to `filter()`). Support methods `setName()`, `setValue()`, `setAttr()` and `addChild()` are available for node manipulation.
+- Starting node can now be specified when exporting or serializing a record.
+
 ## [1.3.1] - 2026-01-28
 
 ### Changed
