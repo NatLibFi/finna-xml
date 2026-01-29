@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<lido:titleWrap xmlns:lido="http://www.lido-schema.org">
+  <lido:titleSet>
+    <lido:appellationValue lido:pref="preferred">Kitchen tool</lido:appellationValue>
+    <lido:appellationValue lido:pref="alternative">Scissors</lido:appellationValue>
+  </lido:titleSet>
+  <lido:titleSet xml:lang="fi">
+    <lido:appellationValue lido:pref="alternative">Sakset</lido:appellationValue>
+    <lido:appellationValue lido:pref="preferred">Keittiövälineet</lido:appellationValue>
+  </lido:titleSet>
+</lido:titleWrap>

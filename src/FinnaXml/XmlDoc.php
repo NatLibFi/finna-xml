@@ -230,7 +230,7 @@ class XmlDoc
     }
 
     /**
-     * Get attribute from a node
+     * Get attribute from a node.
      *
      * @param ?array $node Node
      * @param string $attr Attribute either in Clark notation, or just name with $this->defaultNamespace defined
@@ -248,7 +248,28 @@ class XmlDoc
     }
 
     /**
-     * Get the name of a node
+     * Set attribute value.
+     *
+     * Note: This method is typically used with modify(); it only updates the node but does not modify the document!
+     *
+     * @param array   $node  Node
+     * @param string  $attr  Attribute name either in Clark notation, or just name with $this->defaultNamespace defined
+     * @param ?string $value Attribute value, or null to unset
+     *
+     * @return static
+     */
+    public function setAttr(array &$node, string $attr, ?string $value): static
+    {
+        if (null === $value) {
+            unset($node['attrs'][Notation::ensureValid($attr, $this->defaultNamespace)]);
+        } else {
+            $node['attrs'][Notation::ensureValid($attr, $this->defaultNamespace)] = $value;
+        }
+        return $this;
+    }
+
+    /**
+     * Get the name of a node.
      *
      * @param array $node          Node
      * @param bool  $omitDefaultNs Leave out namespace if it's the default
@@ -270,6 +291,22 @@ class XmlDoc
     }
 
     /**
+     * Set node name.
+     *
+     * Note: This method is typically used with modify(); it only updates the node but does not modify the document!
+     *
+     * @param array  $node Node
+     * @param string $name Name
+     *
+     * @return static
+     */
+    public function setName(array &$node, string $name): static
+    {
+        $node['name'] = $name;
+        return $this;
+    }
+
+    /**
      * Get the string value of a node
      *
      * @param array $node Node
@@ -280,6 +317,56 @@ class XmlDoc
     public function value(array $node, bool $trim = true): string
     {
         return $trim ? trim($node['val']) : $node['val'];
+    }
+
+    /**
+     * Set node value.
+     *
+     * Note: This method is typically used with modify(); it only updates the node but does not modify the document!
+     *
+     * @param array  $node  Node
+     * @param string $value Value
+     *
+     * @return static
+     */
+    public function setValue(array &$node, string $value): static
+    {
+        $node['val'] = $value;
+        return $this;
+    }
+
+    /**
+     * Add a child node.
+     *
+     * Note: This method is typically used with modify(); it only updates the node but does not modify the document!
+     *
+     * @param array  $node     Parent node
+     * @param string $name     Node name
+     * @param string $value    Node value
+     * @param array  $attrs    Attributes
+     * @param ?int   $position Position in child list (0 = first), or null to append
+     *
+     * @return static
+     */
+    public function addChild(
+        array &$node,
+        string $name,
+        string $value,
+        array $attrs = [],
+        ?int $position = null
+    ): static {
+        $new = [
+            'name' => $name,
+            'val' => $value,
+            'sub' => [],
+            'attrs' => $attrs,
+        ];
+        if (null === $position) {
+            $node['sub'][] = $new;
+        } else {
+            array_splice($node['sub'], $position, 0, [$new]);
+        }
+        return $this;
     }
 
     /**
@@ -297,6 +384,20 @@ class XmlDoc
     }
 
     /**
+     * Modify nodes.
+     *
+     * Calls the callback for each node to allow it to be updated.
+     *
+     * @param callable $callback Callback
+     *
+     * @return void
+     */
+    public function modify(callable $callback): void
+    {
+        $this->parsed['data']['sub'] = $this->modifyRecursive($callback, $this->parsed['data'], []);
+    }
+
+    /**
      * Filter nodes recursively.
      *
      * Calls the callback for each node and removes the node if the callback returns true.
@@ -310,10 +411,34 @@ class XmlDoc
     protected function filterRecursive(callable $callback, array $node, array $path): array
     {
         $result = [];
-        foreach ($node['sub'] as $subNode) {
+        foreach ($node['sub'] as $i => $subNode) {
             $subPath = [...$path, $subNode['name']];
-            if (!$callback($subNode, implode('/', $subPath))) {
+            if (!$callback($subNode, implode('/', $subPath), $i)) {
                 $subNode['sub'] = $this->filterRecursive($callback, $subNode, $subPath);
+                $result[] = $subNode;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Modify nodes recursively.
+     *
+     * Calls the callback for each node to allow it to be updated.
+     *
+     * @param callable $callback Callback
+     * @param array    $node     Parent node
+     * @param array    $path     Current path
+     *
+     * @return array
+     */
+    protected function modifyRecursive(callable $callback, array $node, array $path): array
+    {
+        $result = [];
+        foreach ($node['sub'] as $i => $subNode) {
+            $subPath = [...$path, $subNode['name']];
+            if (false !== $callback($subNode, implode('/', $subPath), $i)) {
+                $subNode['sub'] = $this->modifyRecursive($callback, $subNode, $subPath);
                 $result[] = $subNode;
             }
         }

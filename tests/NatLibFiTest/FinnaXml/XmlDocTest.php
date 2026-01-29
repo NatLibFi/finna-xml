@@ -81,14 +81,16 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
      *
      * @return void
      */
-    public function stestXmlAddNs(): void
+    public function testXmlAddNs(): void
     {
         $xmlStr = $this->getFixture('xml-without-ns.xml');
+        // Adjust for the fact that adding namespaces won't magically handle xml:lang properly:
+        $expected = str_replace('xml:lang', 'lido:lang', $this->getFixture('xml-with-ns.xml'));
         $xml = new XmlDoc();
         $xml->parse($xmlStr);
         $xml->setDefaultNamespace('http://www.lido-schema.org', 'lido');
         $this->assertXmlStringEqualsXmlString(
-            $this->getFixture('xml-with-ns.xml'),
+            $expected,
             $xml->toXML(2)
         );
     }
@@ -108,6 +110,47 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
         $this->assertXmlStringEqualsXmlString(
             $xmlStr,
             $xml2->toXML(2)
+        );
+
+        $ns = 'http://www.lido-schema.org';
+        $xml2->import($xml->export($xml->first(path: "{{$ns}}lido/{{$ns}}category")));
+        $this->assertXmlStringEqualsXmlString(
+            $this->getFixture('xml-with-multiple-ns-category.xml'),
+            $xml2->toXML(2)
+        );
+    }
+
+    /**
+     * Test toXML.
+     *
+     * @return void
+     */
+    public function testToXML(): void
+    {
+        $ns = 'http://www.lido-schema.org';
+        $xmlStr = $this->getFixture('xml-with-ns.xml');
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $this->assertXmlStringEqualsXmlString(
+            $xmlStr,
+            $xml->toXML()
+        );
+
+        $node = $xml->first(
+            path: "{{$ns}}lido/{{$ns}}descriptiveMetadata/{{$ns}}objectIdentificationWrap/{{$ns}}titleWrap"
+        );
+        $this->assertXmlStringEqualsXmlString(
+            $this->getFixture('xml-with-ns-titlewrap.xml'),
+            $xml->toXML(2, node: $node)
+        );
+
+        $nodes = $xml->all(
+            path: "{{$ns}}lido/{{$ns}}descriptiveMetadata/{{$ns}}objectIdentificationWrap/{{$ns}}titleWrap/"
+            . "{{$ns}}titleSet"
+        );
+        $this->assertXmlStringEqualsXmlString(
+            $this->getFixture('xml-with-ns-titleset.xml'),
+            $xml->toXML(2, node: $nodes[1])
         );
     }
 
@@ -476,6 +519,72 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Test modify.
+     *
+     * @return void
+     */
+    public function testModify(): void
+    {
+        $xml = new XmlDoc();
+        $xmlStr = $this->getFixture('xml-with-ns.xml');
+        $expected = str_replace(
+            [
+                '<lido:appellationValue lido:pref="preferred">Kitchen tool</lido:appellationValue>',
+                '<lido:appellationValue lido:pref="alternative">Scissors</lido:appellationValue>',
+                '<lido:appellationValue lido:pref="alternative">Sakset</lido:appellationValue>',
+                '<lido:appellationValue lido:pref="preferred">Keittiövälineet</lido:appellationValue>',
+            ],
+            [
+                '<lido:appellationValue xml:lang="foo">Modified Kitchen tool</lido:appellationValue>',
+                '<lido:appellationValue xml:lang="bar">First New Title</lido:appellationValue>'
+                . '<lido:appellationValue xml:lang="bar">Second New Title</lido:appellationValue>',
+                '<lido:appellationValue xml:lang="foo">Modified Sakset</lido:appellationValue>',
+                '',
+            ],
+            $xmlStr
+        );
+
+        $xml->parse($xmlStr);
+        $ns = 'http://www.lido-schema.org';
+        $titleSetPath = "{{$ns}}lido/{{$ns}}descriptiveMetadata/{{$ns}}objectIdentificationWrap/{{$ns}}titleWrap"
+            . "/{{$ns}}titleSet";
+        $titlePath = $titleSetPath . "/{{$ns}}appellationValue";
+        $xml->modify(
+            function (&$node, $path, $index) use ($xml, $titleSetPath, $titlePath, $ns) {
+                if ($path === $titleSetPath && 0 === $index) {
+                    $xml->addChild(
+                        $node,
+                        "{{$ns}}appellationValue",
+                        'Second New Title',
+                        ['{http://www.w3.org/XML/1998/namespace}lang' => 'bar']
+                    );
+                    $xml->addChild(
+                        $node,
+                        "{{$ns}}appellationValue",
+                        'First New Title',
+                        ['{http://www.w3.org/XML/1998/namespace}lang' => 'bar'],
+                        2
+                    );
+                }
+                if ($path === $titlePath) {
+                    if ($index === 1) {
+                        return false;
+                    }
+                    if (!str_contains($xml->value($node), 'New Title')) {
+                        $xml->setValue($node, 'Modified ' . $xml->value($node))
+                            ->setAttr($node, "{{$ns}}pref", null)
+                            ->setAttr($node, '{http://www.w3.org/XML/1998/namespace}lang', 'foo');
+                    }
+                }
+            }
+        );
+        $this->assertXmlStringEqualsXmlString(
+            $expected,
+            $xml->toXML()
+        );
+    }
+
+    /**
      * Test notation parsing.
      *
      * @return void
@@ -514,6 +623,46 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
     {
         $this->expectExceptionMessage("' foo ' is invalid");
         Notation::parse(' foo ');
+    }
+
+    /**
+     * Test missing prefix definition for an element.
+     *
+     * @return void
+     */
+    public function testMissingElementPrefix(): void
+    {
+        $xml = new XmlDoc();
+        $xml->parse($this->getFixture('xml-with-ns.xml'));
+        $xml->modify(
+            function (&$node, $path) use ($xml) {
+                if ($path === '{http://www.lido-schema.org}lido') {
+                    $xml->setName($node, '{http://foo}lido');
+                }
+            }
+        );
+        $this->expectExceptionMessage('No prefix found for namespace http://foo');
+        $xml->toXML();
+    }
+
+    /**
+     * Test missing prefix definition for an attribute.
+     *
+     * @return void
+     */
+    public function testMissingAttrPrefix(): void
+    {
+        $xml = new XmlDoc();
+        $xml->parse($this->getFixture('xml-with-ns.xml'));
+        $xml->modify(
+            function (&$node, $path) use ($xml) {
+                if ($path === '{http://www.lido-schema.org}lido') {
+                    $xml->setAttr($node, '{http://foo}pref', 'bar');
+                }
+            }
+        );
+        $this->expectExceptionMessage('No prefix found for namespace http://foo');
+        $xml->toXML();
     }
 
     /**

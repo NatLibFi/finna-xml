@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lido:category xmlns:finna="http://localhost" xmlns:lido="http://www.lido-schema.org">
+  <lido:conceptID lido:type="URI">concept-uri</lido:conceptID>
+  <lido:term xml:lang="en">Man-Made Object</lido:term>
+</lido:category>
