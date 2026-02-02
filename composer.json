@@ -4,7 +4,7 @@
     "description": "Yet another XML parser, reader and writer for diverse records with and without namespaces.",
     "keywords": ["xml", "dom", "parser"],
     "license": "MIT",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "autoload": {
         "psr-4": {
             "FinnaXml\\": "src/FinnaXml"

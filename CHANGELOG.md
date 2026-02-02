@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-02-02
+
+### Added
+
+- An option was added to leave out namespace prefix from rendered XML when there's only a single one.
+- New `localName()` method can be used to retrieve the local name (non-namespaced) of a node.
+- New `removeChildren()` method can be used to remove all child nodes of a node during `modify()`.
+- New `replaceChildren()` method can be used to replace all child nodes of a node with another XmlDoc during `modify()`.
+- The callback used with `filter()` and `modify()` is now passed a stack of parent nodes for reference.
+
+# Changed
+
+- If a prefix for a namespace is not defined, one is generated automatically when rendering the XML.
+
+# Fixed
+
+- Several aspects of attribute handling particularly when a default namespace is not defined have been fixed.
+
+
 ## [1.4.0] - 2026-01-29
 
 ### Added
