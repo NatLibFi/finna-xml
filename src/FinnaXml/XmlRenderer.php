@@ -34,6 +34,8 @@ namespace FinnaXml;
 use RuntimeException;
 use XMLWriter;
 
+use function count;
+
 /**
  * XML Renderer
  *
@@ -47,6 +49,27 @@ use XMLWriter;
  */
 class XmlRenderer
 {
+    /**
+     * Trim leading and trailing whitespace from text nodes?
+     *
+     * @var bool
+     */
+    protected bool $trim;
+
+    /**
+     * Omit namespace prefixes?
+     *
+     * @var bool
+     */
+    protected bool $omitNamespacePrefixes;
+
+    /**
+     * XML Writer
+     *
+     * @var XMLWriter
+     */
+    protected XMLWriter $writer;
+
     /**
      * Constructor
      *
@@ -64,52 +87,80 @@ class XmlRenderer
     /**
      * Render the parsed array as an XML string.
      *
-     * @param int    $indent Indent (pretty-print) by $indent spaces (0 to disable)
-     * @param bool   $trim   Trim leading and trailing whitespace from text nodes?
-     * @param ?array $node   Node to serialize (omit to serialize the full record)
+     * @param int    $indent           Indent (pretty-print) by $indent spaces
+     * @param bool   $trim             Trim leading and trailing whitespace from text nodes?
+     * @param ?array $node             Node to serialize (omit to serialize the full record)
+     * @param bool   $omitSinglePrefix Omit namespace prefix if there's only a single namespace?
      *
      * @return string
      */
-    public function render(int $indent = 0, bool $trim = false, ?array $node = null): string
+    public function render(
+        int $indent = 0,
+        bool $trim = false,
+        ?array $node = null,
+        bool $omitSinglePrefix = false
+    ): string {
+        $this->trim = $trim;
+        // First go through all nodes and generate namespace prefixes as needed:
+        $this->checkNode($node);
+        $namespaces = $this->parsed['namespaces'];
+        unset($namespaces['xsi']);
+        $this->omitNamespacePrefixes = $omitSinglePrefix && count($namespaces) <= 1;
+        $this->writer = new XMLWriter();
+        $this->writer->openMemory();
+        $this->writer->setIndent((bool)$indent);
+        $this->writer->setIndentString(str_repeat(' ', $indent));
+        $this->writer->startDocument();
+        $this->nodeToXML($node, root: true);
+        $this->writer->endDocument();
+        return $this->writer->flush();
+    }
+
+    /**
+     * Check node's namespace prefixes and add missing ones.
+     *
+     * @param ?array $node Node to write, or null to start from root
+     *
+     * @return void
+     */
+    protected function checkNode(?array $node = null): void
     {
-        $writer = new XMLWriter();
-        $writer->openMemory();
-        $writer->setIndent((bool)$indent);
-        $writer->setIndentString(str_repeat(' ', $indent));
-        $writer->startDocument();
-        $this->nodeToXML($writer, $node, trim: $trim, root: true);
-        $writer->endDocument();
-        return $writer->flush();
+        $current = $node ?? $this->parsed['data'];
+        [$elementNs] = Notation::parse($current['name']);
+        $elementNs = $elementNs ?: $this->defaultNamespace;
+        if ($elementNs) {
+            $this->getNamespacePrefix($elementNs);
+        }
+        // Sub-nodes:
+        foreach ($current['sub'] as $subNode) {
+            $this->checkNode($subNode);
+        }
     }
 
     /**
      * Write a node to XMLWriter.
      *
-     * @param XMLWriter $writer XMLWriter
-     * @param ?array    $node   Node to write, or null to start from root
-     * @param bool      $trim   Trim whitespace from text nodes?
-     * @param bool      $root   Is this the root node?
+     * @param ?array $node Node to write, or null to start from root
+     * @param bool   $root Is this the root node?
      *
      * @return void
      */
-    protected function nodeToXML(XMLWriter $writer, ?array $node = null, bool $trim = false, bool $root = false): void
+    protected function nodeToXML(?array $node = null, bool $root = false): void
     {
         $current = $node ?? $this->parsed['data'];
         [$elementNs, $localName] = Notation::parse($current['name']);
         $elementNs = $elementNs ?: $this->defaultNamespace;
         $elementNsPrefix = null;
-        if ($elementNs) {
-            if (null === ($elementNsPrefix = $this->getNamespacePrefix($elementNs))) {
-                throw new RuntimeException("No prefix found for namespace $elementNs");
-            }
+        if ($elementNs && !$this->omitNamespacePrefixes) {
+            $elementNsPrefix = $this->getNamespacePrefix($elementNs);
             // Output namespace declaration only for root element (and not for xml namespace):
-            if ($root && 'xml' !== $elementNsPrefix) {
-                $writer->startElementNs($elementNsPrefix, $localName, $elementNs);
-            } else {
-                $writer->startElement("$elementNsPrefix:$localName");
-            }
+            $this->writer->startElementNs(
+                $elementNsPrefix,
+                $localName,
+                $root && 'xml' !== $elementNsPrefix ? $elementNs : null
+            );
         } else {
-            $writer->startElement($localName);
+            $this->writer->startElement($localName);
         }
         // Write namespaces for root node:
         if ($root && $this->parsed['namespaces']) {
@@ -135,9 +186,9 @@ class XmlRenderer
             }
 
             foreach ($addNamespaces as $prefix => $ns) {
-                $writer->startAttribute("xmlns:$prefix");
-                $writer->text($ns);
-                $writer->endAttribute();
+                $this->writer->startAttribute($this->omitNamespacePrefixes ? 'xmlns' : "xmlns:$prefix");
+                $this->writer->text($ns);
+                $this->writer->endAttribute();
             }
         }
         // Write attributes:
@@ -151,32 +202,26 @@ class XmlRenderer
                     : $this->defaultNamespace;
                 $localName = $attr;
             }
-            if ($ns) {
+            if ($ns && !$this->omitNamespacePrefixes) {
                 if (null === ($prefix = $this->getNamespacePrefix($ns))) {
                     throw new RuntimeException("No prefix found for namespace $ns");
                 }
-
-                // Write namespace only if it differs from the element's namespace, and is not xml:
-                if ($ns !== $elementNs && 'xml' !== $prefix) {
-                    $writer->startAttributeNs($prefix, $localName, $ns);
-                } else {
-                    $writer->startAttribute("$prefix:$localName");
-                }
+                $this->writer->startAttributeNs($prefix, $localName, $root ? $ns : null);
             } else {
-                $writer->startAttribute($localName);
+                $this->writer->startAttribute($localName);
             }
-            $writer->text($value);
-            $writer->endAttribute();
+            $this->writer->text($value);
+            $this->writer->endAttribute();
         }
-        $val = $trim ? trim($current['val']) : $current['val'];
+        $val = $this->trim ? trim($current['val']) : $current['val'];
         if ('' !== $val) {
-            $writer->text($val);
+            $this->writer->text($val);
         }
         // Sub-nodes:
         foreach ($current['sub'] as $subNode) {
-            $this->nodeToXML($writer, $subNode, $trim);
+            $this->nodeToXML($subNode);
         }
-        $writer->endElement();
+        $this->writer->endElement();
     }
 
     /**
@@ -184,16 +229,24 @@ class XmlRenderer
      *
      * @param string $ns Namespace
      *
-     * @return ?string
+     * @return string
      */
-    protected function getNamespacePrefix(string $ns): ?string
+    protected function getNamespacePrefix(string $ns): string
     {
-        if ($ns === $this->defaultNamespace) {
+        if ($ns === $this->defaultNamespace && $this->defaultNamespacePrefix) {
             return $this->defaultNamespacePrefix;
         }
         if (false !== ($prefix = array_search($ns, $this->parsed['namespaces']))) {
             return $prefix;
         }
-        return null;
+        // No existing prefix, add a new one:
+        for ($i = 1; $i < 1000; $i++) {
+            $prefix = 'ns' . (string)$i;
+            if (!isset($this->parsed['namespaces'][$prefix])) {
+                $this->parsed['namespaces'][$prefix] = $ns;
+                return $prefix;
+            }
+        }
+        throw new RuntimeException("Cannot find a free prefix slot for namespace $ns");
     }
 }

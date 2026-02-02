@@ -84,20 +84,25 @@ class XmlDoc
     /**
      * Serialize the document as XML.
      *
-     * @param int    $indent Indent (pretty-print) by $indent spaces
-     * @param bool   $trim   Trim leading and trailing whitespace from text nodes?
-     * @param ?array $node   Node to serialize (omit to serialize the full record)
+     * @param int    $indent           Indent (pretty-print) by $indent spaces
+     * @param bool   $trim             Trim leading and trailing whitespace from text nodes?
+     * @param ?array $node             Node to serialize (omit to serialize the full record)
+     * @param bool   $omitSinglePrefix Omit namespace prefix if there's only a single namespace?
      *
      * @return string
      */
-    public function toXML(int $indent = 0, bool $trim = false, ?array $node = null): string
-    {
+    public function toXML(
+        int $indent = 0,
+        bool $trim = false,
+        ?array $node = null,
+        bool $omitSinglePrefix = false
+    ): string {
         if (null === $this->parsed) {
             throw new RuntimeException('No parsed document available');
         }
 
         return (new XmlRenderer($this->parsed, $this->defaultNamespace, $this->defaultNamespacePrefix))
-            ->render($indent, $trim, $node);
+            ->render($indent, $trim, $node, $omitSinglePrefix);
     }
 
     /**
@@ -147,6 +152,23 @@ class XmlDoc
     {
         $this->defaultNamespace = $namespace;
         $this->defaultNamespacePrefix = $prefix;
+        return $this;
+    }
+
+    /**
+     * Add a namespace prefix.
+     *
+     * @param string $namespace Namespace URI
+     * @param string $prefix    Prefix to use
+     *
+     * @return static
+     */
+    public function addNamespacePrefix(string $namespace, string $prefix): static
+    {
+        if (null === $this->parsed) {
+            throw new RuntimeException('No parsed document available');
+        }
+        $this->parsed['namespaces'][$prefix] = $namespace;
         return $this;
     }
 
@@ -241,9 +263,18 @@ class XmlDoc
     public function attr(?array $node, string $attr, bool $trim = true): ?string
     {
         // Try to find the attribute first with namespace and fall back to search without namespace:
-        $result = $node['attrs'][Notation::ensureValid($attr, $this->defaultNamespace)]
-            ?? $node['attrs'][$attr]
-            ?? null;
+        $result = null;
+        if ($parsed = Notation::tryParse($attr)) {
+            $nsAttr = '{' . $parsed[0] . '}' . $parsed[1];
+            $result = $node['attrs'][$nsAttr] ?? $node['attrs'][$parsed[1]] ?? null;
+        } else {
+            // Try with default namespace:
+            if (null !== $this->defaultNamespace) {
+                $nsAttr = '{' . $this->defaultNamespace . '}' . $attr;
+                $result = $node['attrs'][$nsAttr] ?? null;
+            }
+            $result ??= $node['attrs'][$attr] ?? null;
+        }
         return ($trim && null !== $result) ? trim($result) : $result;
     }
 
@@ -253,7 +284,7 @@ class XmlDoc
      * Note: This method is typically used with modify(); it only updates the node but does not modify the document!
      *
      * @param array   $node  Node
-     * @param string  $attr  Attribute name either in Clark notation, or just name with $this->defaultNamespace defined
+     * @param string  $attr  Attribute name either in Clark notation, or just name
      * @param ?string $value Attribute value, or null to unset
      *
      * @return static
@@ -261,9 +292,9 @@ class XmlDoc
     public function setAttr(array &$node, string $attr, ?string $value): static
     {
         if (null === $value) {
-            unset($node['attrs'][Notation::ensureValid($attr, $this->defaultNamespace)]);
+            unset($node['attrs'][$attr]);
         } else {
-            $node['attrs'][Notation::ensureValid($attr, $this->defaultNamespace)] = $value;
+            $node['attrs'][$attr] = $value;
         }
         return $this;
     }
@@ -288,6 +319,19 @@ class XmlDoc
             }
         }
         return $node['name'];
+    }
+
+    /**
+     * Get the local name of a node.
+     *
+     * @param array $node Node
+     *
+     * @return string
+     */
+    public function localName(array $node): string
+    {
+        [, $localName] = Notation::parse($node['name']);
+        return $localName;
     }
 
     /**
@@ -339,6 +383,7 @@ class XmlDoc
      * Add a child node.
      *
      * Note: This method is typically used with modify(); it only updates the node but does not modify the document!
+     * Make sure that the namespace is known (use addNamespacePrefix) if you need to serialize the XML.
      *
      * @param array  $node     Parent node
      * @param string $name     Node name
@@ -370,6 +415,64 @@ class XmlDoc
     }
 
     /**
+     * Remove all child nodes.
+     *
+     * Note: This method is typically used with modify(); it only updates the node, but does not modify the document!
+     *
+     * @param array $node Parent node
+     *
+     * @return static
+     */
+    public function removeChildren(array &$node): static
+    {
+        $node['sub'] = [];
+        return $this;
+    }
+
+    /**
+     * Replace all child nodes with the nodes from another XmlDoc (exluding the root element).
+     *
+     * Note: This method is typically used with modify(); it only updates the node and this instance's namespace
+     * prefixes, but does not modify the document!
+     *
+     * @param array  $node     Parent node
+     * @param XmlDoc $otherDoc XmlDoc with the nodes to use
+     *
+     * @return static
+     */
+    public function replaceChildren(array &$node, XmlDoc $otherDoc): static
+    {
+        $exported = $otherDoc->export();
+        // Ensure all namespaces have prefixes:
+        foreach ($exported['namespaces'] as $prefix => $namespace) {
+            if (false !== array_search($namespace, $this->parsed['namespaces'])) {
+                continue;
+            }
+            if (null !== ($existing = $this->parsed['namespaces'][$prefix] ?? null)) {
+                if ($existing !== $namespace) {
+                    // Collision, find a free prefix:
+                    $newPrefix = null;
+                    for ($i = 2; $i < 100; $i++) {
+                        if (!isset($this->namespaces[$prefix . (string)$i])) {
+                            $newPrefix = $prefix . (string)$i;
+                            break;
+                        }
+                    }
+                    if (null === $newPrefix) {
+                        throw new RuntimeException("Cannot find a free namespace prefix for $namespace");
+                    }
+                    $this->parsed['namespaces'][$newPrefix] = $namespace;
+                }
+            } else {
+                $this->parsed['namespaces'][$prefix] = $namespace;
+            }
+        }
+        $node['sub'] = $exported['data']['sub'];
+
+        return $this;
+    }
+
+    /**
      * Filter nodes.
      *
      * Calls the callback for each node and removes the node if the callback returns true.
@@ -380,7 +483,7 @@ class XmlDoc
      */
     public function filter(callable $callback): void
     {
-        $this->parsed['data']['sub'] = $this->filterRecursive($callback, $this->parsed['data'], []);
+        $this->parsed['data']['sub'] = $this->filterRecursive($callback, [$this->parsed['data']], []);
     }
 
     /**
@@ -394,7 +497,7 @@ class XmlDoc
      */
     public function modify(callable $callback): void
     {
-        $this->parsed['data']['sub'] = $this->modifyRecursive($callback, $this->parsed['data'], []);
+        $this->parsed['data']['sub'] = $this->modifyRecursive($callback, [$this->parsed['data']], []);
     }
 
     /**
@@ -402,19 +505,21 @@ class XmlDoc
      *
      * Calls the callback for each node and removes the node if the callback returns true.
      *
-     * @param callable $callback Callback
-     * @param array    $node     Parent node
-     * @param array    $path     Current path
+     * @param callable $callback  Callback
+     * @param array    $nodeStack Parent node stack
+     * @param array    $path      Current path
      *
      * @return array
      */
-    protected function filterRecursive(callable $callback, array $node, array $path): array
+    protected function filterRecursive(callable $callback, array $nodeStack, array $path): array
     {
         $result = [];
+        $node = end($nodeStack);
         foreach ($node['sub'] as $i => $subNode) {
             $subPath = [...$path, $subNode['name']];
-            if (!$callback($subNode, implode('/', $subPath), $i)) {
-                $subNode['sub'] = $this->filterRecursive($callback, $subNode, $subPath);
+            $subStack = [...$nodeStack, $subNode];
+            if (!$callback($subNode, implode('/', $subPath), $i, $subStack)) {
+                $subNode['sub'] = $this->filterRecursive($callback, $subStack, $subPath);
                 $result[] = $subNode;
             }
         }
@@ -426,19 +531,23 @@ class XmlDoc
      *
      * Calls the callback for each node to allow it to be updated.
      *
-     * @param callable $callback Callback
-     * @param array    $node     Parent node
-     * @param array    $path     Current path
+     * @param callable $callback  Callback
+     * @param array    $nodeStack Parent node stack
+     * @param array    $path      Current path
      *
      * @return array
      */
-    protected function modifyRecursive(callable $callback, array $node, array $path): array
+    protected function modifyRecursive(callable $callback, array $nodeStack, array $path): array
     {
         $result = [];
+        $node = end($nodeStack);
         foreach ($node['sub'] as $i => $subNode) {
             $subPath = [...$path, $subNode['name']];
-            if (false !== $callback($subNode, implode('/', $subPath), $i)) {
-                $subNode['sub'] = $this->modifyRecursive($callback, $subNode, $subPath);
+            $subStack = [...$nodeStack, $subNode];
+            if (false !== $callback($subNode, implode('/', $subPath), $i, $subStack)) {
+                // Recreate subStack with any modifications:
+                $subStack = [...$nodeStack, $subNode];
+                $subNode['sub'] = $this->modifyRecursive($callback, $subStack, $subPath);
                 $result[] = $subNode;
             }
         }

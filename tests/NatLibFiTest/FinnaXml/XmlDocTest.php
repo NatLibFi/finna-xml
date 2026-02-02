@@ -339,6 +339,38 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Test simple MARCXML roundtrip.
+     *
+     * @return void
+     */
+    public function testMarcXml(): void
+    {
+        $xmlStr = $this->getFixture('marcxml.xml');
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $this->assertXmlStringEqualsXmlString(
+            $xmlStr,
+            $xml->toXML(omitSinglePrefix: true)
+        );
+    }
+
+    /**
+     * Test MARCXML collection roundtrip.
+     *
+     * @return void
+     */
+    public function testMarcXmlCollection(): void
+    {
+        $xmlStr = $this->getFixture('marcxml-collection.xml');
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $this->assertXmlStringEqualsXmlString(
+            $xmlStr,
+            $xml->toXML()
+        );
+    }
+
+    /**
      * Test empty elements.
      *
      * @return void
@@ -529,12 +561,16 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
         $xmlStr = $this->getFixture('xml-with-ns.xml');
         $expected = str_replace(
             [
+                'xmlns:lido="http://www.lido-schema.org"',
+                '<lido:term>Kirja</lido:term>',
                 '<lido:appellationValue lido:pref="preferred">Kitchen tool</lido:appellationValue>',
                 '<lido:appellationValue lido:pref="alternative">Scissors</lido:appellationValue>',
                 '<lido:appellationValue lido:pref="alternative">Sakset</lido:appellationValue>',
                 '<lido:appellationValue lido:pref="preferred">Keittiövälineet</lido:appellationValue>',
             ],
             [
+                'xmlns:lido="http://www.lido-schema.org" xmlns:test="http://localhost/test"',
+                '<test:testType attr="primary">value</test:testType>',
                 '<lido:appellationValue xml:lang="foo">Modified Kitchen tool</lido:appellationValue>',
                 '<lido:appellationValue xml:lang="bar">First New Title</lido:appellationValue>'
                 . '<lido:appellationValue xml:lang="bar">Second New Title</lido:appellationValue>',
@@ -566,6 +602,12 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
                         2
                     );
                 }
+                if ($xml->localName($node) === 'objectWorkType') {
+                    $xml->removeChildren($node);
+                    $xml->addNamespacePrefix('http://localhost/test', 'test');
+                    $xml->addChild($node, '{http://localhost/test}testType', 'value', ['attr' => 'primary']);
+                }
+
                 if ($path === $titlePath) {
                     if ($index === 1) {
                         return false;
@@ -575,6 +617,57 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
                             ->setAttr($node, "{{$ns}}pref", null)
                             ->setAttr($node, '{http://www.w3.org/XML/1998/namespace}lang', 'foo');
                     }
+                }
+            }
+        );
+        $this->assertXmlStringEqualsXmlString(
+            $expected,
+            $xml->toXML()
+        );
+    }
+
+    /**
+     * Test replaceChildren.
+     *
+     * @return void
+     */
+    public function testReplaceChildren(): void
+    {
+        $replacement = <<<EOT
+            <doc xmlns:l="http://www.lido-schema.org" xmlns:lido="http://localhost/customlido"
+              xmlns:custom="http://localhost/custom">
+              <l:appellationValue lido:pref="preferred" custom:foo="bar">Replacement tool</l:appellationValue>
+            </doc>
+            EOT;
+
+        $xmlReplacement = new XmlDoc();
+        $xmlReplacement->parse($replacement);
+        $xmlStr = $this->getFixture('xml-with-ns.xml');
+        $expected = str_replace(
+            [
+                'xmlns:lido="http://www.lido-schema.org"',
+                '<lido:appellationValue lido:pref="preferred">Kitchen tool</lido:appellationValue>',
+                '<lido:appellationValue lido:pref="alternative">Scissors</lido:appellationValue>',
+            ],
+            [
+                'xmlns:custom="http://localhost/custom" xmlns:lido="http://www.lido-schema.org"'
+                . ' xmlns:lido2="http://localhost/customlido"',
+                '<lido:appellationValue custom:foo="bar" lido2:pref="preferred">'
+                . 'Replacement tool</lido:appellationValue>',
+                ''
+            ],
+            $xmlStr
+        );
+
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $ns = 'http://www.lido-schema.org';
+        $titleSetPath = "{{$ns}}lido/{{$ns}}descriptiveMetadata/{{$ns}}objectIdentificationWrap/{{$ns}}titleWrap"
+            . "/{{$ns}}titleSet";
+        $xml->modify(
+            function (&$node, $path, $index) use ($xml, $titleSetPath, $xmlReplacement) {
+                if ($path === $titleSetPath && 0 === $index) {
+                    $xml->replaceChildren($node, $xmlReplacement);
                 }
             }
         );
@@ -641,28 +734,10 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
                 }
             }
         );
-        $this->expectExceptionMessage('No prefix found for namespace http://foo');
-        $xml->toXML();
-    }
-
-    /**
-     * Test missing prefix definition for an attribute.
-     *
-     * @return void
-     */
-    public function testMissingAttrPrefix(): void
-    {
-        $xml = new XmlDoc();
-        $xml->parse($this->getFixture('xml-with-ns.xml'));
-        $xml->modify(
-            function (&$node, $path) use ($xml) {
-                if ($path === '{http://www.lido-schema.org}lido') {
-                    $xml->setAttr($node, '{http://foo}pref', 'bar');
-                }
-            }
+        $this->assertXmlStringEqualsXmlString(
+            $this->getFixture('xml-with-ns1-ns.xml'),
+            $xml->toXML()
         );
-        $this->expectExceptionMessage('No prefix found for namespace http://foo');
-        $xml->toXML();
     }
 
     /**

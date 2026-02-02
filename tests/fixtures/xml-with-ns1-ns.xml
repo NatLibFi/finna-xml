@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<lido:lidoWrap xmlns:lido="http://www.lido-schema.org" xmlns:ns1="http://foo" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.lido-schema.org http://www.lido-schema.org/schema/v1.0/lido-v1.0.xsd">
+  <ns1:lido>
+    <lido:lidoRecID lido:type="Test">12345</lido:lidoRecID>
+    <lido:descriptiveMetadata xml:lang="en">
+      <lido:objectClassificationWrap>
+        <lido:objectWorkTypeWrap>
+          <lido:objectWorkType>
+            <lido:term>Kirja</lido:term>
+          </lido:objectWorkType>
+        </lido:objectWorkTypeWrap>
+      </lido:objectClassificationWrap>
+      <lido:objectIdentificationWrap>
+        <lido:titleWrap>
+          <lido:titleSet>
+            <lido:appellationValue lido:pref="preferred">Kitchen tool</lido:appellationValue>
+            <lido:appellationValue lido:pref="alternative">Scissors</lido:appellationValue>
+          </lido:titleSet>
+          <lido:titleSet xml:lang="fi">
+            <lido:appellationValue lido:pref="alternative">Sakset</lido:appellationValue>
+            <lido:appellationValue lido:pref="preferred">Keittiövälineet</lido:appellationValue>
+          </lido:titleSet>
+        </lido:titleWrap>
+        <lido:inscriptionsWrap/>
+      </lido:objectIdentificationWrap>
+    </lido:descriptiveMetadata>
+  </ns1:lido>
+</lido:lidoWrap>
