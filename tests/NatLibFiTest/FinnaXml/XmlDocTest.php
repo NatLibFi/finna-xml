@@ -654,7 +654,7 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
                 . ' xmlns:lido2="http://localhost/customlido"',
                 '<lido:appellationValue custom:foo="bar" lido2:pref="preferred">'
                 . 'Replacement tool</lido:appellationValue>',
-                ''
+                '',
             ],
             $xmlStr
         );

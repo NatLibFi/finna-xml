@@ -34,6 +34,7 @@ namespace FinnaXml;
 use InvalidArgumentException;
 use RuntimeException;
 
+use function in_array;
 use function is_array;
 
 /**
@@ -445,7 +446,7 @@ class XmlDoc
         $exported = $otherDoc->export();
         // Ensure all namespaces have prefixes:
         foreach ($exported['namespaces'] as $prefix => $namespace) {
-            if (false !== array_search($namespace, $this->parsed['namespaces'])) {
+            if (in_array($namespace, $this->parsed['namespaces'])) {
                 continue;
             }
             if (null !== ($existing = $this->parsed['namespaces'][$prefix] ?? null)) {
