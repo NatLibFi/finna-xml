@@ -337,15 +337,15 @@ class XmlDoc
     }
 
     /**
-     * Get the local name of a node.
+     * Get the local name of a node or qualified name.
      *
-     * @param array $node Node
+     * @param string|array $nodeOrName Node or a qualified name
      *
      * @return string
      */
-    public function localName(array $node): string
+    public function localName(string|array $nodeOrName): string
     {
-        [, $localName] = Notation::parse($node['name']);
+        [, $localName] = Notation::parse(is_array($nodeOrName) ? $nodeOrName['name'] : $nodeOrName);
         return $localName;
     }
 

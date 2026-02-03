@@ -685,6 +685,26 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Test localName method.
+     *
+     * @return void
+     */
+    public function testLocalName(): void
+    {
+        $xmlStr = $this->getFixture('xml-with-ns.xml');
+        $xml = new XmlDoc();
+        $xml->parse($xmlStr);
+        $this->assertSame(
+            'lidoWrap',
+            $xml->localName($xml->root())
+        );
+        $this->assertSame(
+            'lidoWrap',
+            $xml->localName('{foo}lidoWrap')
+        );
+    }
+
+    /**
      * Test notation parsing.
      *
      * @return void
