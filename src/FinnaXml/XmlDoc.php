@@ -280,6 +280,20 @@ class XmlDoc
     }
 
     /**
+     * Get all attributes from a node.
+     *
+     * @param ?array $node Node
+     * @param bool   $trim Trim results?
+     *
+     * @return array
+     */
+    public function attrs(?array $node, bool $trim = true): array
+    {
+        $result = $node['attrs'] ?? [];
+        return $trim ? array_map('trim', $result) : $result;
+    }
+
+    /**
      * Set attribute value.
      *
      * Note: This method is typically used with modify(); it only updates the node but does not modify the document!

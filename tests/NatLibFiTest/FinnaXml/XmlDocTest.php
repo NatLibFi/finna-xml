@@ -222,7 +222,7 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
     #[DataProvider('readingProvider')]
     public function testReading(?string $defaultNs, string|array $path, string $attr): void
     {
-        $xmlStr = $this->getFixture('xml-with-ns.xml');
+        $xmlStr = $this->getFixture('xml-with-multiple-ns.xml');
         $xml = new XmlDoc();
         $xml->parse($xmlStr);
 
@@ -230,8 +230,15 @@ class XmlDocTest extends \PHPUnit\Framework\TestCase
         $recId = $xml->all(path: $path);
         $this->assertIsArray($recId);
         $this->assertCount(1, $recId);
-        $this->assertSame('12345', $xml->value($recId[0]));
-        $this->assertSame('Test', $xml->attr($recId[0], $attr));
+        $this->assertSame('record-id', $xml->value($recId[0]));
+        $this->assertSame('local', $xml->attr($recId[0], $attr));
+        $this->assertSame(
+            [
+                '{http://www.lido-schema.org}source' => 'Source',
+                '{http://www.lido-schema.org}type' => 'local',
+            ],
+            $xml->attrs($recId[0])
+        );
     }
 
     /**
