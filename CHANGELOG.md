@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-02-03
+
+### Added
+
+- New `attrs()` method can be used to retrieve all attributes of a node.
+
+# Changed
+
+- The `localName()` method now allows also a qualified name to be passed to retrieve a local name for it.
+
+
 ## [1.5.0] - 2026-02-02
 
 ### Added
