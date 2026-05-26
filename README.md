@@ -2,6 +2,10 @@
 Finna-XML
 =========
 
+| :warning: WARNING          |
+|:---------------------------|
+| This package is abandoned. Please use [vufind-org/vufind-xml](https://github.com/vufind-org/vufind-xml/) instead. |
+
 Introduction
 ------------
 Finna-XML is yet another XML handling library for PHP. It's based on PHP's XMLReader and XMLWriter. The resulting
